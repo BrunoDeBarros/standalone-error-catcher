@@ -353,7 +353,7 @@ class Exceptions {
         try {
             $is_not_local = ((!defined('ENV') or stristr(ENV, 'local') === false) and (!defined('env') or stristr(env, 'dev') === false) and !isset($_COOKIE['iama_developer']));
 
-            if (php_uname('s') != "Darwin") {
+            if (php_uname('s') == "Darwin") {
                 $is_not_local = false;
             }
 
