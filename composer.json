@@ -1,0 +1,4 @@
+{
+    "name": "brunodebarros/standalone-error-catcher",
+    "description": "A simple catch-all for PHP errors that makes an HTTP request on every error."
+}
