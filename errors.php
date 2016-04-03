@@ -429,14 +429,16 @@ namespace Brunodebarros\StandaloneErrorCatcher {
                         # Just getting rid of all output.
                     }
 
-                    if ($is_not_local) {
-                        $title = "Unknown Error";
-                        $subtitle = "An unknown error has occurred.";
-                        $enduser_message = "<p>We track these errors automatically and will resolve them as quickly as possible.</p>
+                    if (php_sapi_name() != "cli") {
+                        if ($is_not_local) {
+                            $title = "Unknown Error";
+                            $subtitle = "An unknown error has occurred.";
+                            $enduser_message = "<p>We track these errors automatically and will resolve them as quickly as possible.</p>
                                         <p>If the problem persists feel free to contact us.</p>";
-                        echo self::error_php_enduser($title, $subtitle, $enduser_message);
-                    } else {
-                        echo $contents;
+                            echo self::error_php_enduser($title, $subtitle, $enduser_message);
+                        } else {
+                            echo $contents;
+                        }
                     }
 
                     if ($is_not_local) {
@@ -623,12 +625,12 @@ namespace Brunodebarros\StandaloneErrorCatcher {
                     } else {
                         if (isset($step['class'])) {
                             if (method_exists($step['class'], $step['function'])) {
-                                $reflection = new ReflectionMethod($step['class'], $step['function']);
+                                $reflection = new \ReflectionMethod($step['class'], $step['function']);
                             } else {
-                                $reflection = new ReflectionMethod($step['class'], '__call');
+                                $reflection = new \ReflectionMethod($step['class'], '__call');
                             }
                         } else {
-                            $reflection = new ReflectionFunction($step['function']);
+                            $reflection = new \ReflectionFunction($step['function']);
                         }
 
                         // Get the function parameters
