@@ -1,717 +1,697 @@
 <?php
 
-/**
- * HTTP Request
- * A web crawler which behaves just like a regular web browser, interpreting
- * location redirects and storing cookies automatically.
- * LICENSE
- * Copyright (c) 2015 Bruno De Barros <bruno@terraduo.com>
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
- * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
- * @author     Bruno De Barros <bruno@terraduo.com>
- * @copyright  Copyright (c) 2015 Bruno De Barros <bruno@terraduo.com>
- * @license    http://opensource.org/licenses/mit-license     MIT License
- * @version    1.0.2
- */
-class HTTP_Request {
+namespace Brunodebarros\StandaloneErrorCatcher {
+    /**
+     * HTTP Request
+     * A web crawler which behaves just like a regular web browser, interpreting
+     * location redirects and storing cookies automatically.
+     * LICENSE
+     * Copyright (c) 2015 Bruno De Barros <bruno@terraduo.com>
+     * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+     * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+     *
+     * @author     Bruno De Barros <bruno@terraduo.com>
+     * @copyright  Copyright (c) 2015 Bruno De Barros <bruno@terraduo.com>
+     * @license    http://opensource.org/licenses/mit-license     MIT License
+     * @version    1.0.2
+     */
+    class HTTP_Request {
 
-    public $cookies = array();
-    public $user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/536.26.17 (KHTML, like Gecko) Version/6.0.2 Safari/536.26.17';
-    public $last_url = '';
-    public $multipart = false;
-    public $redirections = 0;
-    public $max_redirections = 10;
-    public $header = array();
+        public $cookies = array();
+        public $user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/536.26.17 (KHTML, like Gecko) Version/6.0.2 Safari/536.26.17';
+        public $last_url = '';
+        public $multipart = false;
+        public $redirections = 0;
+        public $max_redirections = 10;
+        public $header = array();
 
-    protected $last_request = null;
+        protected $last_request = null;
 
-    function __construct() {
+        function __construct() {
 
-    }
-
-    function getLastRequest() {
-        return $this->last_request;
-    }
-
-    function request($url, $mode = 'GET', $data = array(), $save_to_file = false) {
-        if (!stristr($url, 'http://') and !stristr($url, 'https://')) {
-            $url = 'http://' . $url;
-        }
-        $original = $url;
-        $url = parse_url($url);
-        if (!isset($url['host'])) {
-            print_r($url);
-            throw new HTTP_Request_Exception("Failed to parse the given URL correctly.");
-        }
-        if (!isset($url['path'])) {
-            $url['path'] = '/';
-        }
-        if (!isset($url['query'])) {
-            $url['query'] = '';
         }
 
-        if (!isset($url['port'])) {
-            $url['port'] = ($url['scheme'] == 'https') ? 443 : 80;
+        function getLastRequest() {
+            return $this->last_request;
         }
 
-        $errno = 0;
-        $errstr = '';
-        $port = $url['port'];
-        $sslhost = (($url['scheme'] == 'https') ? 'tls://' : '') . $url['host'];
-        $fp = @fsockopen($sslhost, $port, $errno, $errstr, 30);
-        if (!$fp) {
-            throw new HTTP_Request_Exception("Failed to connect to {$url['host']}.");
-        } else {
-            $url['query'] = '?' . ((empty($url['query']) and $mode == 'GET') ? http_build_query($data) : $url['query']);
-            $out = "$mode {$url['path']}{$url['query']} HTTP/1.0\r\n";
-            $out .= "Host: {$url['host']}\r\n";
-            $out .= "User-Agent: {$this->user_agent}\r\n";
-            if (count($this->cookies) > 0) {
-                $out .= "Cookie: ";
-                $i = 0;
-                foreach ($this->cookies as $name => $cookie) {
-                    if ($i == 0) {
-                        $out .= "$name=$cookie";
-                        $i = 1;
-                    } else {
-                        $out .= "; $name=$cookie";
-                    }
-                }
-                $out .= "\r\n";
+        function request($url, $mode = 'GET', $data = array(), $save_to_file = false) {
+            if (!stristr($url, 'http://') and !stristr($url, 'https://')) {
+                $url = 'http://' . $url;
             }
-            if (!empty($this->last_url)) {
-                $out .= "Referer: " . $this->last_url . "\r\n";
+            $original = $url;
+            $url = parse_url($url);
+            if (!isset($url['host'])) {
+                print_r($url);
+                throw new HTTP_Request_Exception("Failed to parse the given URL correctly.");
             }
-            $out .= "Connection: Close\r\n";
+            if (!isset($url['path'])) {
+                $url['path'] = '/';
+            }
+            if (!isset($url['query'])) {
+                $url['query'] = '';
+            }
 
-            if ($mode == "POST") {
-                if (!$this->multipart) {
-                    $out .= "Content-Type: application/x-www-form-urlencoded\r\n";
-                    $post = self::urlencodeArray($data, $this->multipart);
-                } else {
-                    $out .= "Content-Type: multipart/form-data; boundary=AaB03x\r\n";
-                    $post = self::urlencodeArray($data, $this->multipart, 'AaB03x');
-                }
-                $out .= "Content-Length: " . strlen($post) . "\r\n";
-                $out .= "\r\n";
-                $out .= $post;
+            if (!isset($url['port'])) {
+                $url['port'] = ($url['scheme'] == 'https') ? 443 : 80;
+            }
+
+            $errno = 0;
+            $errstr = '';
+            $port = $url['port'];
+            $sslhost = (($url['scheme'] == 'https') ? 'tls://' : '') . $url['host'];
+            $fp = @fsockopen($sslhost, $port, $errno, $errstr, 30);
+            if (!$fp) {
+                throw new HTTP_Request_Exception("Failed to connect to {$url['host']}.");
             } else {
-                $out .= "\r\n";
-            }
-
-            $content = '';
-            $header = '';
-            $header_passed = false;
-
-            $this->last_request = $out;
-
-            if (fwrite($fp, $out)) {
-
-                if (stristr($original, '://')) {
-                    $this->last_url = $original;
-                } else {
-                    $this->last_url = "://" . $original;
-                }
-
-                if ($save_to_file) {
-                    $fh = fopen($save_to_file, 'w+');
-                }
-
-                while (!feof($fp)) {
-                    if ($header_passed) {
-                        $line = fread($fp, 1024);
-                    } else {
-                        $line = fgets($fp);
-                    }
-
-                    if ($line == "\r\n" and !$header_passed) {
-                        $header_passed = true;
-                        $line = "";
-
-                        $header = self::parseHeaders($header);
-
-                        if (isset($header['Set-Cookie'])) {
-                            if (is_array($header['Set-Cookie'])) {
-                                foreach ($header['Set-Cookie'] as $cookie) {
-                                    $cookie = explode(';', $cookie);
-                                    $cookie = explode('=', $cookie[0], 2);
-                                    $this->cookies[$cookie[0]] = $cookie[1];
-                                }
-                            } else {
-                                $header['Set-Cookie'] = explode(';', $header['Set-Cookie']);
-                                $header['Set-Cookie'] = explode('=', $header['Set-Cookie'][0], 2);
-                                $this->cookies[$header['Set-Cookie'][0]] = $header['Set-Cookie'][1];
-                            }
-                        }
-
-                        $this->header = $header;
-
-                        if (isset($header['Location']) and $this->redirections < $this->max_redirections) {
-
-                            $location = parse_url($header['Location']);
-                            $custom_port = ($url['port'] == 80 or $url['port'] == 443) ? '' : ':' . $url['port'];
-
-                            if (!isset($location['host'])) {
-
-                                if (substr($header['Location'], 0, 1) == '/') {
-                                    # It's an absolute URL.
-                                    $header['Location'] = $url['scheme'] . '://' . $url['host'] . $custom_port . $header['Location'];
-                                } else {
-                                    # It's a relative URL, let's take care of it.
-                                    $path = explode('/', $url['path']);
-                                    array_pop($path);
-                                    $header['Location'] = $url['scheme'] . '://' . $url['host'] . $custom_port . implode('/', $path) . '/' . $header['Location'];
-                                }
-                            }
-                            $this->redirections++;
-                            $content = $this->request($header['Location'], $mode, $data, $save_to_file);
-                            break;
-                        }
-                    }
-                    if ($header_passed) {
-                        if (!$save_to_file) {
-                            $content .= $line;
+                $url['query'] = '?' . ((empty($url['query']) and $mode == 'GET') ? http_build_query($data) : $url['query']);
+                $out = "$mode {$url['path']}{$url['query']} HTTP/1.0\r\n";
+                $out .= "Host: {$url['host']}\r\n";
+                $out .= "User-Agent: {$this->user_agent}\r\n";
+                if (count($this->cookies) > 0) {
+                    $out .= "Cookie: ";
+                    $i = 0;
+                    foreach ($this->cookies as $name => $cookie) {
+                        if ($i == 0) {
+                            $out .= "$name=$cookie";
+                            $i = 1;
                         } else {
-                            fwrite($fh, $line);
+                            $out .= "; $name=$cookie";
                         }
+                    }
+                    $out .= "\r\n";
+                }
+                if (!empty($this->last_url)) {
+                    $out .= "Referer: " . $this->last_url . "\r\n";
+                }
+                $out .= "Connection: Close\r\n";
+
+                if ($mode == "POST") {
+                    if (!$this->multipart) {
+                        $out .= "Content-Type: application/x-www-form-urlencoded\r\n";
+                        $post = self::urlencodeArray($data, $this->multipart);
                     } else {
-                        $header .= $line;
+                        $out .= "Content-Type: multipart/form-data; boundary=AaB03x\r\n";
+                        $post = self::urlencodeArray($data, $this->multipart, 'AaB03x');
+                    }
+                    $out .= "Content-Length: " . strlen($post) . "\r\n";
+                    $out .= "\r\n";
+                    $out .= $post;
+                } else {
+                    $out .= "\r\n";
+                }
+
+                $content = '';
+                $header = '';
+                $header_passed = false;
+
+                $this->last_request = $out;
+
+                if (fwrite($fp, $out)) {
+
+                    if (stristr($original, '://')) {
+                        $this->last_url = $original;
+                    } else {
+                        $this->last_url = "://" . $original;
+                    }
+
+                    if ($save_to_file) {
+                        $fh = fopen($save_to_file, 'w+');
+                    }
+
+                    while (!feof($fp)) {
+                        if ($header_passed) {
+                            $line = fread($fp, 1024);
+                        } else {
+                            $line = fgets($fp);
+                        }
+
+                        if ($line == "\r\n" and !$header_passed) {
+                            $header_passed = true;
+                            $line = "";
+
+                            $header = self::parseHeaders($header);
+
+                            if (isset($header['Set-Cookie'])) {
+                                if (is_array($header['Set-Cookie'])) {
+                                    foreach ($header['Set-Cookie'] as $cookie) {
+                                        $cookie = explode(';', $cookie);
+                                        $cookie = explode('=', $cookie[0], 2);
+                                        $this->cookies[$cookie[0]] = $cookie[1];
+                                    }
+                                } else {
+                                    $header['Set-Cookie'] = explode(';', $header['Set-Cookie']);
+                                    $header['Set-Cookie'] = explode('=', $header['Set-Cookie'][0], 2);
+                                    $this->cookies[$header['Set-Cookie'][0]] = $header['Set-Cookie'][1];
+                                }
+                            }
+
+                            $this->header = $header;
+
+                            if (isset($header['Location']) and $this->redirections < $this->max_redirections) {
+
+                                $location = parse_url($header['Location']);
+                                $custom_port = ($url['port'] == 80 or $url['port'] == 443) ? '' : ':' . $url['port'];
+
+                                if (!isset($location['host'])) {
+
+                                    if (substr($header['Location'], 0, 1) == '/') {
+                                        # It's an absolute URL.
+                                        $header['Location'] = $url['scheme'] . '://' . $url['host'] . $custom_port . $header['Location'];
+                                    } else {
+                                        # It's a relative URL, let's take care of it.
+                                        $path = explode('/', $url['path']);
+                                        array_pop($path);
+                                        $header['Location'] = $url['scheme'] . '://' . $url['host'] . $custom_port . implode('/', $path) . '/' . $header['Location'];
+                                    }
+                                }
+                                $this->redirections++;
+                                $content = $this->request($header['Location'], $mode, $data, $save_to_file);
+                                break;
+                            }
+                        }
+                        if ($header_passed) {
+                            if (!$save_to_file) {
+                                $content .= $line;
+                            } else {
+                                fwrite($fh, $line);
+                            }
+                        } else {
+                            $header .= $line;
+                        }
+                    }
+                    fclose($fp);
+                    if ($save_to_file) {
+                        fclose($fh);
+                    }
+
+                    return $content;
+                } else {
+                    throw new HTTP_Request_Exception("Failed to send request headers to $url.");
+                }
+            }
+        }
+
+        public static function urlencodeArray($data, $multipart = false, $boundary = '') {
+            $return = "";
+            $i = 0;
+
+            if ($multipart) {
+                $return = '--' . $boundary;
+
+                foreach ($data as $key => $value) {
+                    $return .= "\r\n" . 'Content-Disposition: form-data; name="' . $key . '"' . "\r\n" . "\r\n";
+                    $return .= $value . "\r\n";
+                    $return .= '--' . $boundary;
+                }
+
+                $return .= '--';
+            } else {
+                $return = http_build_query($data);
+            }
+
+            return $return;
+        }
+
+        public static function GetBetween($content, $start, $end) {
+            $r = explode($start, $content, 2);
+            if (isset($r[1])) {
+                $r = explode($end, $r[1], 2);
+
+                return $r[0];
+            }
+
+            return '';
+        }
+
+        public static function parseHeaders($headers) {
+            $return = array();
+            $headers = explode("\r\n", $headers);
+            $response = explode(" ", $headers[0]);
+            $return['STATUS'] = $response[1];
+            unset($headers[0]);
+            foreach ($headers as $header) {
+                $header = explode(": ", $header, 2);
+                if (!isset($return[$header[0]])) {
+                    if (isset($header[1])) {
+                        $return[$header[0]] = $header[1];
+                    }
+                } else {
+                    if (!is_array($return[$header[0]])) {
+                        $return[$header[0]] = array($return[$header[0]]);
+                    }
+                    $return[$header[0]][] = $header[1];
+                }
+            }
+
+            return $return;
+        }
+
+    }
+
+    class HTTP_Request_Exception extends \Exception {
+
+    }
+
+    class Exceptions {
+
+        /**
+         * Some nice names for the error types
+         */
+        public static $php_errors = array(
+            E_ERROR => 'Fatal Error',
+            E_USER_ERROR => 'User Error',
+            E_PARSE => 'Parse Error',
+            E_WARNING => 'Warning',
+            E_USER_WARNING => 'User Warning',
+            E_STRICT => 'Strict',
+            E_NOTICE => 'Notice',
+            E_RECOVERABLE_ERROR => 'Recoverable Error',
+        );
+
+        /**
+         * List of available error levels
+         *
+         * @var array
+         * @access public
+         */
+        public static $static_levels = array(
+            E_ERROR => 'Error',
+            E_WARNING => 'Warning',
+            E_PARSE => 'Parsing Error',
+            E_NOTICE => 'Notice',
+            E_CORE_ERROR => 'Core Error',
+            E_CORE_WARNING => 'Core Warning',
+            E_COMPILE_ERROR => 'Compile Error',
+            E_COMPILE_WARNING => 'Compile Warning',
+            E_USER_ERROR => 'User Error',
+            E_USER_WARNING => 'User Warning',
+            E_USER_NOTICE => 'User Notice',
+            E_STRICT => 'Runtime Notice',
+        );
+
+        /**
+         * The Shutdown errors to show (all others will be ignored).
+         */
+        public static $shutdown_errors = array(E_PARSE, E_ERROR, E_USER_ERROR, E_COMPILE_ERROR);
+
+        /**
+         * Error Handler
+         * Converts all errors into ErrorExceptions. This handler
+         * respects error_reporting settings.
+         *
+         * @access    public
+         * @throws    \ErrorException
+         * @return    bool
+         */
+        public static function error_handler($code, $error, $file = null, $line = null) {
+            if (error_reporting() & $code) {
+                // This error is not suppressed by current error reporting settings
+                // Convert the error into an ErrorException
+                $severity = (!isset(self::$static_levels[$code])) ? $code : self::$static_levels[$code];
+                throw new \Exception("PHP $severity - $error ($file:$line)");
+            }
+
+            // Do not execute the PHP error handler
+            return true;
+        }
+
+        /**
+         * Exception Handler
+         * Displays the error message, source of the exception, and the stack trace of the error.
+         *
+         * @access    public
+         *
+         * @param \Exception $e
+         *
+         * @return    boolean
+         */
+        public static function exception_handler($e, $display_error = true) {
+            global $_CLEAN_SERVER;
+
+            try {
+                $is_not_local = ((!defined('ENV') or stristr(ENV, 'local') === false) and (!defined('env') or stristr(env, 'dev') === false) and !isset($_COOKIE['iama_developer']));
+
+                if (php_uname('s') == "Darwin") {
+                    $is_not_local = false;
+                }
+
+                // Get the exception information
+                $type = get_class($e);
+                $code = $e->getCode();
+                $message = $e->getMessage();
+                $file = $e->getFile();
+                $line = $e->getLine();
+
+                // Create a text version of the exception
+                $error = self::exception_text($e);
+
+                // Get the exception backtrace
+                $trace = $e->getTrace();
+
+                if ($e instanceof \ErrorException) {
+                    if (isset(self::$php_errors[$code])) {
+                        // Use the human-readable error name
+                        $code = self::$php_errors[$code];
+                    }
+
+                }
+
+                $env_title = defined("ENV_TITLE") ? ENV_TITLE : "Unknown Project";
+                $subject = "[" . "$env_title" . "] $message ($file [$line])";
+
+                foreach ($trace as $key => $value) {
+
+                    $arg0 = isset($value['args']) ? (isset($value['args'][0]) ? $value['args'][0] : '') : '';
+                    $arg0 = is_string($arg0) ? $arg0 : '';
+
+                    if (!isset($value['file']) or stristr($value['file'], 'core/CodeIgniter.php') or stristr($value['file'], 'core/Loader.php') or stristr($value['file'], 'core/Common.php') or (stristr($arg0, 'core/CodeIgniter.php')) or (stristr($arg0, 'codeigniter_system/base_index.php'))
+                    ) {
+                        unset($trace[$key]);
+                    }
+
+                    $force_logging = isset($trace[$key]['function']) and in_array($trace[$key]['function'], array("log_without_error"));
+
+                    if ($is_not_local and !$force_logging) {
+                        unset($trace[$key]['args']);
                     }
                 }
-                fclose($fp);
-                if ($save_to_file) {
-                    fclose($fh);
+
+                $reset_trace = reset($trace);
+
+                if ($e instanceof \FailedValidationException) {
+                    array_unshift($trace, array(
+                        'file' => $e->getFile(),
+                        'line' => $line,
+                        'function' => '__construct',
+                        'class' => get_class($e),
+                        'type' => '->',
+                        'args' =>
+                            array(
+                                'validation_errors' => $e->get_validation_errors(),
+                                'data' => $e->get_data(),
+                            ),
+                    ));
                 }
 
-                return $content;
-            } else {
-                throw new HTTP_Request_Exception("Failed to send request headers to $url.");
-            }
-        }
-    }
+                $new_file = $reset_trace['file'];
+                $new_line = $reset_trace['line'];
 
-    public static function urlencodeArray($data, $multipart = false, $boundary = '') {
-        $return = "";
-        $i = 0;
-
-        if ($multipart) {
-            $return = '--' . $boundary;
-
-            foreach ($data as $key => $value) {
-                $return .= "\r\n" . 'Content-Disposition: form-data; name="' . $key . '"' . "\r\n" . "\r\n";
-                $return .= $value . "\r\n";
-                $return .= '--' . $boundary;
-            }
-
-            $return .= '--';
-        } else {
-            $return = http_build_query($data);
-        }
-
-        return $return;
-    }
-
-    public static function GetBetween($content, $start, $end) {
-        $r = explode($start, $content, 2);
-        if (isset($r[1])) {
-            $r = explode($end, $r[1], 2);
-
-            return $r[0];
-        }
-
-        return '';
-    }
-
-    public static function parseHeaders($headers) {
-        $return = array();
-        $headers = explode("\r\n", $headers);
-        $response = explode(" ", $headers[0]);
-        $return['STATUS'] = $response[1];
-        unset($headers[0]);
-        foreach ($headers as $header) {
-            $header = explode(": ", $header, 2);
-            if (!isset($return[$header[0]])) {
-                if (isset($header[1])) {
-                    $return[$header[0]] = $header[1];
-                }
-            } else {
-                if (!is_array($return[$header[0]])) {
-                    $return[$header[0]] = array($return[$header[0]]);
-                }
-                $return[$header[0]][] = $header[1];
-            }
-        }
-
-        return $return;
-    }
-
-}
-
-class HTTP_Request_Exception extends Exception {
-
-}
-
-class Exceptions {
-
-    /**
-     * Some nice names for the error types
-     */
-    public static $php_errors = array(
-        E_ERROR => 'Fatal Error',
-        E_USER_ERROR => 'User Error',
-        E_PARSE => 'Parse Error',
-        E_WARNING => 'Warning',
-        E_USER_WARNING => 'User Warning',
-        E_STRICT => 'Strict',
-        E_NOTICE => 'Notice',
-        E_RECOVERABLE_ERROR => 'Recoverable Error',
-    );
-
-    /**
-     * List of available error levels
-     *
-     * @var array
-     * @access public
-     */
-    public static $static_levels = array(
-        E_ERROR => 'Error',
-        E_WARNING => 'Warning',
-        E_PARSE => 'Parsing Error',
-        E_NOTICE => 'Notice',
-        E_CORE_ERROR => 'Core Error',
-        E_CORE_WARNING => 'Core Warning',
-        E_COMPILE_ERROR => 'Compile Error',
-        E_COMPILE_WARNING => 'Compile Warning',
-        E_USER_ERROR => 'User Error',
-        E_USER_WARNING => 'User Warning',
-        E_USER_NOTICE => 'User Notice',
-        E_STRICT => 'Runtime Notice',
-    );
-
-    /**
-     * The Shutdown errors to show (all others will be ignored).
-     */
-    public static $shutdown_errors = array(E_PARSE, E_ERROR, E_USER_ERROR, E_COMPILE_ERROR);
-
-    /**
-     * Construct
-     * Sets the error handlers.
-     *
-     * @access    public
-     * @return    void
-     */
-    public function __construct() {
-        //Set the Exception Handler
-        set_exception_handler(array('Exceptions', 'exception_handler'));
-
-        // Set the Error Handler
-        set_error_handler(array('Exceptions', 'error_handler'));
-
-        // Set the handler for shutdown to catch Parse errors
-        register_shutdown_function(array('Exceptions', 'shutdown_handler'));
-
-        // This is a hack to set the default timezone if it isn't set. Not setting it causes issues.
-        date_default_timezone_set(date_default_timezone_get());
-    }
-
-    /**
-     * Error Handler
-     * Converts all errors into ErrorExceptions. This handler
-     * respects error_reporting settings.
-     *
-     * @access    public
-     * @throws    ErrorException
-     * @return    bool
-     */
-    public static function error_handler($code, $error, $file = null, $line = null) {
-        if (error_reporting() & $code) {
-            // This error is not suppressed by current error reporting settings
-            // Convert the error into an ErrorException
-            $severity = (!isset(self::$static_levels[$code])) ? $code : self::$static_levels[$code];
-            throw new Exception("PHP $severity - $error ($file:$line)");
-        }
-
-        // Do not execute the PHP error handler
-        return true;
-    }
-
-    /**
-     * Exception Handler
-     * Displays the error message, source of the exception, and the stack trace of the error.
-     *
-     * @access    public
-     *
-     * @param    object     exception object
-     *
-     * @return    boolean
-     */
-    public static function exception_handler($e, $display_error = true) {
-        global $_CLEAN_SERVER;
-
-        try {
-            $is_not_local = ((!defined('ENV') or stristr(ENV, 'local') === false) and (!defined('env') or stristr(env, 'dev') === false) and !isset($_COOKIE['iama_developer']));
-
-            if (php_uname('s') == "Darwin") {
-                $is_not_local = false;
-            }
-
-            // Get the exception information
-            $type = get_class($e);
-            $code = $e->getCode();
-            $message = $e->getMessage();
-            $file = $e->getFile();
-            $line = $e->getLine();
-
-            // Create a text version of the exception
-            $error = self::exception_text($e);
-
-            // Get the exception backtrace
-            $trace = $e->getTrace();
-
-            if ($e instanceof ErrorException) {
-                if (isset(self::$php_errors[$code])) {
-                    // Use the human-readable error name
-                    $code = self::$php_errors[$code];
+                if ($new_file) {
+                    $file = $new_file;
+                    $line = $new_line;
                 }
 
-            }
+                $_CLEAN_SERVER = $_SERVER;
 
-            $env_title = defined("ENV_TITLE") ? ENV_TITLE : "Unknown Project";
-            $subject = "[" . "$env_title" . "] $message ($file [$line])";
+                $delete = array('HTTP_ACCEPT_ENCODING', 'REDIRECT_STATUS', 'HTTP_DNT', 'HTTP_COOKIE', 'HTTP_CONNECTION', 'PATH', 'SERVER_SIGNATURE', 'SERVER_SOFTWARE', 'SERVER_ADMIN', 'REMOTE_PORT', 'SERVER_PROTOCOL', 'GATEWAY_INTERFACE', 'argv', 'argc', 'REQUEST_TIME_FLOAT', 'REQUEST_TIME');
 
-            foreach ($trace as $key => $value) {
-
-                $arg0 = isset($value['args']) ? (isset($value['args'][0]) ? $value['args'][0] : '') : '';
-                $arg0 = is_string($arg0) ? $arg0 : '';
-
-                if (!isset($value['file']) or stristr($value['file'], 'core/CodeIgniter.php') or stristr($value['file'], 'core/Loader.php') or stristr($value['file'], 'core/Common.php') or (stristr($arg0, 'core/CodeIgniter.php')) or (stristr($arg0, 'codeigniter_system/base_index.php'))
-                ) {
-                    unset($trace[$key]);
+                foreach ($delete as $var) {
+                    if (isset($_CLEAN_SERVER[$var])) {
+                        unset($_CLEAN_SERVER[$var]);
+                    }
                 }
 
-                $force_logging = isset($trace[$key]['function']) and in_array($trace[$key]['function'], array("log_without_error"));
+                $contents = self::error_php_custom($type, $code, $message, $file, $line, $trace);
 
-                if ($is_not_local and !$force_logging) {
-                    unset($trace[$key]['args']);
-                }
-            }
+                if ($display_error or !$is_not_local) {
 
-            $reset_trace = reset($trace);
+                    if (!headers_sent()) {
+                        header_remove("Cache-Control");
+                        header("Content-Type: text/html");
+                        header_remove("Content-Disposition");
+                    }
 
-            if ($e instanceof FailedValidationException) {
-                array_unshift($trace, array(
-                    'file' => $e->getFile(),
-                    'line' => $line,
-                    'function' => '__construct',
-                    'class' => get_class($e),
-                    'type' => '->',
-                    'args' =>
-                        array(
-                            'validation_errors' => $e->get_validation_errors(),
-                            'data' => $e->get_data(),
-                        ),
-                ));
-            }
+                    # Get rid of everything on the page,
+                    # so the error is the only thing displayed.
+                    while (@ob_end_clean()) {
+                        # Just getting rid of all output.
+                    }
 
-            $new_file = $reset_trace['file'];
-            $new_line = $reset_trace['line'];
-
-            if ($new_file) {
-                $file = $new_file;
-                $line = $new_line;
-            }
-
-            $_CLEAN_SERVER = $_SERVER;
-
-            $delete = array('HTTP_ACCEPT_ENCODING', 'REDIRECT_STATUS', 'HTTP_DNT', 'HTTP_COOKIE', 'HTTP_CONNECTION', 'PATH', 'SERVER_SIGNATURE', 'SERVER_SOFTWARE', 'SERVER_ADMIN', 'REMOTE_PORT', 'SERVER_PROTOCOL', 'GATEWAY_INTERFACE', 'argv', 'argc', 'REQUEST_TIME_FLOAT', 'REQUEST_TIME');
-
-            foreach ($delete as $var) {
-                if (isset($_CLEAN_SERVER[$var])) {
-                    unset($_CLEAN_SERVER[$var]);
-                }
-            }
-
-            $contents = self::error_php_custom($type, $code, $message, $file, $line, $trace);
-
-            if ($display_error or !$is_not_local) {
-
-                if (!headers_sent()) {
-                    header_remove("Cache-Control");
-                    header("Content-Type: text/html");
-                    header_remove("Content-Disposition");
-                }
-
-                # Get rid of everything on the page,
-                # so the error is the only thing displayed.
-                while (@ob_end_clean()) {
-                    # Just getting rid of all output.
-                }
-
-                if ($is_not_local) {
-                    $title = "Unknown Error";
-                    $subtitle = "An unknown error has occurred.";
-                    $enduser_message = "<p>We track these errors automatically and will resolve them as quickly as possible.</p>
+                    if ($is_not_local) {
+                        $title = "Unknown Error";
+                        $subtitle = "An unknown error has occurred.";
+                        $enduser_message = "<p>We track these errors automatically and will resolve them as quickly as possible.</p>
                                         <p>If the problem persists feel free to contact us.</p>";
-                    echo self::error_php_enduser($title, $subtitle, $enduser_message);
-                } else {
-                    echo $contents;
-                }
+                        echo self::error_php_enduser($title, $subtitle, $enduser_message);
+                    } else {
+                        echo $contents;
+                    }
 
-                if ($is_not_local) {
+                    if ($is_not_local) {
+                        exception_send_mail($subject, $contents);
+                    }
+
+                    # Make sure to end the execution of the script now.
+                    exit(1);
+                } else {
                     exception_send_mail($subject, $contents);
                 }
+                return true;
+            } catch (\Throwable $e) {
+                // Clean the output buffer if one exists
+                ob_get_level() and ob_clean();
 
-                # Make sure to end the execution of the script now.
+                // Display the exception text
+                echo self::exception_text($e), "\n";
+
+                // Exit with an error status
                 exit(1);
-            } else {
-                exception_send_mail($subject, $contents);
-            }
-            return true;
-        } catch (Throwable $e) {
-            // Clean the output buffer if one exists
-            ob_get_level() and ob_clean();
+            } catch (\Exception $e) {
+                // Clean the output buffer if one exists
+                ob_get_level() and ob_clean();
 
-            // Display the exception text
-            echo self::exception_text($e), "\n";
+                // Display the exception text
+                echo self::exception_text($e), "\n";
 
-            // Exit with an error status
-            exit(1);
-        } catch (Exception $e) {
-            // Clean the output buffer if one exists
-            ob_get_level() and ob_clean();
-
-            // Display the exception text
-            echo self::exception_text($e), "\n";
-
-            // Exit with an error status
-            exit(1);
-        }
-    }
-
-    /**
-     * Shutdown Handler
-     * Catches errors that are not caught by the error handler, such as E_PARSE.
-     *
-     * @access    public
-     * @return    void
-     */
-    public static function shutdown_handler() {
-        $error = error_get_last();
-        if ($error = error_get_last() AND in_array($error['type'], self::$shutdown_errors)) {
-            // Clean the output buffer
-            ob_get_level() and ob_clean();
-
-            // Fake an exception for nice debugging
-            self::exception_handler(new ErrorException($error['message'], $error['type'], 0, $error['file'], $error['line']));
-
-            // Shutdown now to avoid a "death loop"
-            exit(1);
-        }
-    }
-
-    /**
-     * Exception Text
-     * Makes a nicer looking, 1 line extension.
-     *
-     * @access    public
-     *
-     * @param    object    Exception
-     *
-     * @return    string
-     */
-    public static function exception_text($e) {
-        return sprintf('%s [ %s ]: %s ~ %s [ %d ]', get_class($e), $e->getCode(), strip_tags($e->getMessage()), $e->getFile(), $e->getLine());
-    }
-
-    /**
-     * Debug Source
-     * Returns an HTML string, highlighting a specific line of a file, with some
-     * number of lines padded above and below.
-     *
-     * @access    public
-     *
-     * @param    string      file to open
-     * @param    integer     line number to highlight
-     * @param    integer     number of padding lines
-     *
-     * @return    string     source of file
-     * @return    FALSE     file is unreadable
-     */
-    public static function debug_source($file, $line_number, $padding = 5) {
-        if (!$file OR !is_readable($file)) {
-            // Continuing will cause errors
-            return false;
-        }
-
-        // Open the file and set the line position
-        $file = fopen($file, 'r');
-        $line = 0;
-
-        // Set the reading range
-        $range = array('start' => $line_number - $padding, 'end' => $line_number + $padding);
-
-        // Set the zero-padding amount for line numbers
-        $format = '% ' . strlen($range['end']) . 'd';
-
-        $source = '';
-        while (($row = fgets($file)) !== false) {
-            // Increment the line number
-            if (++$line > $range['end'])
-                break;
-
-            if ($line >= $range['start']) {
-                // Make the row safe for output
-                $row = htmlspecialchars($row, ENT_NOQUOTES);
-
-                // Trim whitespace and sanitize the row
-                $row = '<span class="number">' . sprintf($format, $line) . '</span> ' . $row;
-
-                if ($line === $line_number) {
-                    // Apply highlighting to this row
-                    $row = '<span class="line highlight">' . $row . '</span>';
-                } else {
-                    $row = '<span class="line">' . $row . '</span>';
-                }
-
-                // Add to the captured source
-                $source .= $row;
+                // Exit with an error status
+                exit(1);
             }
         }
 
-        // Close the file
-        fclose($file);
+        /**
+         * Shutdown Handler
+         * Catches errors that are not caught by the error handler, such as E_PARSE.
+         *
+         * @access    public
+         * @return    void
+         */
+        public static function shutdown_handler() {
+            $error = error_get_last();
+            if ($error = error_get_last() AND in_array($error['type'], self::$shutdown_errors)) {
+                // Clean the output buffer
+                ob_get_level() and ob_clean();
 
-        return '<pre class="source"><code>' . $source . '</code></pre>';
-    }
+                // Fake an exception for nice debugging
+                self::exception_handler(new \ErrorException($error['message'], $error['type'], 0, $error['file'], $error['line']));
 
-    /**
-     * Trace
-     * Returns an array of HTML strings that represent each step in the backtrace.
-     *
-     * @access    public
-     *
-     * @param    string    path to debug
-     *
-     * @return    string
-     */
-    public static function trace(array $trace = null) {
-        if ($trace === null) {
-            // Start a new trace
-            $trace = debug_backtrace();
+                // Shutdown now to avoid a "death loop"
+                exit(1);
+            }
         }
 
-        // Non-standard function calls
-        $statements = array('include', 'include_once', 'require', 'require_once');
+        /**
+         * Exception Text
+         * Makes a nicer looking, 1 line extension.
+         *
+         * @access    public
+         *
+         * @param    $e    \Exception
+         *
+         * @return    string
+         */
+        public static function exception_text($e) {
+            return sprintf('%s [ %s ]: %s ~ %s [ %d ]', get_class($e), $e->getCode(), strip_tags($e->getMessage()), $e->getFile(), $e->getLine());
+        }
 
-        $output = array();
-        foreach ($trace as $step) {
-            if (!isset($step['function'])) {
-                // Invalid trace step
-                continue;
+        /**
+         * Debug Source
+         * Returns an HTML string, highlighting a specific line of a file, with some
+         * number of lines padded above and below.
+         *
+         * @access    public
+         *
+         * @param    string      file to open
+         * @param    integer     line number to highlight
+         * @param    integer     number of padding lines
+         *
+         * @return    string     source of file
+         * @return    FALSE     file is unreadable
+         */
+        public static function debug_source($file, $line_number, $padding = 5) {
+            if (!$file OR !is_readable($file)) {
+                // Continuing will cause errors
+                return false;
             }
 
-            if (isset($step['file']) AND isset($step['line'])) {
-                // Include the source of this step
-                $source = self::debug_source($step['file'], $step['line']);
-            }
+            // Open the file and set the line position
+            $file = fopen($file, 'r');
+            $line = 0;
 
-            if (isset($step['file'])) {
-                $file = $step['file'];
+            // Set the reading range
+            $range = array('start' => $line_number - $padding, 'end' => $line_number + $padding);
 
-                if (isset($step['line'])) {
-                    $line = $step['line'];
+            // Set the zero-padding amount for line numbers
+            $format = '% ' . strlen($range['end']) . 'd';
+
+            $source = '';
+            while (($row = fgets($file)) !== false) {
+                // Increment the line number
+                if (++$line > $range['end'])
+                    break;
+
+                if ($line >= $range['start']) {
+                    // Make the row safe for output
+                    $row = htmlspecialchars($row, ENT_NOQUOTES);
+
+                    // Trim whitespace and sanitize the row
+                    $row = '<span class="number">' . sprintf($format, $line) . '</span> ' . $row;
+
+                    if ($line === $line_number) {
+                        // Apply highlighting to this row
+                        $row = '<span class="line highlight">' . $row . '</span>';
+                    } else {
+                        $row = '<span class="line">' . $row . '</span>';
+                    }
+
+                    // Add to the captured source
+                    $source .= $row;
                 }
             }
 
-            // function()
-            $function = $step['function'];
+            // Close the file
+            fclose($file);
 
-            if (in_array($step['function'], $statements)) {
-                if (empty($step['args'])) {
-                    // No arguments
-                    $args = array();
-                } else {
-                    // Sanitize the file path
-                    $args = array($step['args'][0]);
+            return '<pre class="source"><code>' . $source . '</code></pre>';
+        }
+
+        /**
+         * Trace
+         * Returns an array of HTML strings that represent each step in the backtrace.
+         *
+         * @access    public
+         *
+         * @param    string    path to debug
+         *
+         * @return    string
+         */
+        public static function trace(array $trace = null) {
+            if ($trace === null) {
+                // Start a new trace
+                $trace = debug_backtrace();
+            }
+
+            // Non-standard function calls
+            $statements = array('include', 'include_once', 'require', 'require_once');
+
+            $output = array();
+            foreach ($trace as $step) {
+                if (!isset($step['function'])) {
+                    // Invalid trace step
+                    continue;
                 }
-            } elseif (isset($step['args'])) {
-                if (strpos($step['function'], '{closure}') !== false) {
-                    // Introspection on closures in a stack trace is impossible
-                    $params = null;
-                } else {
-                    if (isset($step['class'])) {
-                        if (method_exists($step['class'], $step['function'])) {
-                            $reflection = new ReflectionMethod($step['class'], $step['function']);
+
+                if (isset($step['file']) AND isset($step['line'])) {
+                    // Include the source of this step
+                    $source = self::debug_source($step['file'], $step['line']);
+                }
+
+                if (isset($step['file'])) {
+                    $file = $step['file'];
+
+                    if (isset($step['line'])) {
+                        $line = $step['line'];
+                    }
+                }
+
+                // function()
+                $function = $step['function'];
+
+                if (in_array($step['function'], $statements)) {
+                    if (empty($step['args'])) {
+                        // No arguments
+                        $args = array();
+                    } else {
+                        // Sanitize the file path
+                        $args = array($step['args'][0]);
+                    }
+                } elseif (isset($step['args'])) {
+                    if (strpos($step['function'], '{closure}') !== false) {
+                        // Introspection on closures in a stack trace is impossible
+                        $params = null;
+                    } else {
+                        if (isset($step['class'])) {
+                            if (method_exists($step['class'], $step['function'])) {
+                                $reflection = new ReflectionMethod($step['class'], $step['function']);
+                            } else {
+                                $reflection = new ReflectionMethod($step['class'], '__call');
+                            }
                         } else {
-                            $reflection = new ReflectionMethod($step['class'], '__call');
+                            $reflection = new ReflectionFunction($step['function']);
                         }
-                    } else {
-                        $reflection = new ReflectionFunction($step['function']);
+
+                        // Get the function parameters
+                        $params = $reflection->getParameters();
                     }
 
-                    // Get the function parameters
-                    $params = $reflection->getParameters();
-                }
+                    $args = array();
 
-                $args = array();
-
-                foreach ($step['args'] as $i => $arg) {
-                    if (isset($params[$i])) {
-                        // Assign the argument by the parameter name
-                        $args[$params[$i]->name] = $arg;
-                    } else {
-                        // Assign the argument by number
-                        $args[$i] = $arg;
+                    foreach ($step['args'] as $i => $arg) {
+                        if (isset($params[$i])) {
+                            // Assign the argument by the parameter name
+                            $args[$params[$i]->name] = $arg;
+                        } else {
+                            // Assign the argument by number
+                            $args[$i] = $arg;
+                        }
                     }
                 }
+
+                if (isset($step['class'])) {
+                    // Class->method() or Class::method()
+                    $function = $step['class'] . $step['type'] . $step['function'];
+                }
+
+                $output[] = array(
+                    'function' => $function,
+                    'args' => isset($args) ? $args : null,
+                    'file' => isset($file) ? $file : null,
+                    'line' => isset($line) ? $line : null,
+                    'source' => isset($source) ? $source : null,
+                );
+
+                unset($function, $args, $file, $line, $source);
             }
 
-            if (isset($step['class'])) {
-                // Class->method() or Class::method()
-                $function = $step['class'] . $step['type'] . $step['function'];
-            }
-
-            $output[] = array(
-                'function' => $function,
-                'args' => isset($args) ? $args : null,
-                'file' => isset($file) ? $file : null,
-                'line' => isset($line) ? $line : null,
-                'source' => isset($source) ? $source : null,
-            );
-
-            unset($function, $args, $file, $line, $source);
+            return $output;
         }
 
-        return $output;
-    }
+        /**
+         * Native PHP error handler
+         *
+         * @access    private
+         *
+         * @param    string    the error severity
+         * @param    string    the error string
+         * @param    string    the error filepath
+         * @param    string    the error line number
+         *
+         * @return    string
+         */
+        function show_php_error($severity, $message, $filepath, $line) {
+            $severity = (!isset($this->levels[$severity])) ? $severity : $this->levels[$severity];
+            throw new \Exception("PHP $severity - $message ($filepath:$line)");
+        }
 
-    /**
-     * Native PHP error handler
-     *
-     * @access    private
-     *
-     * @param    string    the error severity
-     * @param    string    the error string
-     * @param    string    the error filepath
-     * @param    string    the error line number
-     *
-     * @return    string
-     */
-    function show_php_error($severity, $message, $filepath, $line) {
-        $severity = (!isset($this->levels[$severity])) ? $severity : $this->levels[$severity];
-        throw new Exception("PHP $severity - $message ($filepath:$line)");
-    }
+        public static function error_php_custom($type, $code, $message, $file, $line, $trace) {
+            $error_id = uniqid('error');
+            $title = defined("ENV_TITLE") ? ENV_TITLE : "Unknown Project";
+            $class = "Exceptions";
+            $source = $class::debug_source($file, $line);
+            $processed_trace = $class::trace($trace);
 
-    public static function error_php_custom($type, $code, $message, $file, $line, $trace) {
-        $error_id = uniqid('error');
-        $title = defined("ENV_TITLE") ? ENV_TITLE : "Unknown Project";
-        $class = "Exceptions";
-        $source = $class::debug_source($file, $line);
-        $processed_trace = $class::trace($trace);
-
-        $error = <<<error
+            $error = <<<error
 <style type="text/css">
 #exception_error {
 	background: #ddd;
@@ -832,75 +812,75 @@ function koggle(elem)
 		<ol class="trace">
 error;
 
-        foreach ($processed_trace as $i => $step) {
-            $error .= "<li>";
-            $error .= "<p>";
-            $error .= "<span class='file'>";
-            if ($step['file']) {
-                $source_id = $error_id . 'source' . $i;
-                $error .= "<a href='#$source_id' onclick=\"return koggle('$source_id')\">" . $step['file'] . " [ {$step['line']} ]</a>";
-            } else {
-                $error .= 'PHP internal call';
-            }
-            $error .= "</span> &raquo; {$step['function']} (";
-            if ($step['args']) {
-                $args_id = $error_id . 'args' . $i;
-                $error .= "<a href='#$args_id' onclick=\"return koggle('$args_id')\">arguments</a>";
-            }
-            $error .= ")</p>";
+            foreach ($processed_trace as $i => $step) {
+                $error .= "<li>";
+                $error .= "<p>";
+                $error .= "<span class='file'>";
+                if ($step['file']) {
+                    $source_id = $error_id . 'source' . $i;
+                    $error .= "<a href='#$source_id' onclick=\"return koggle('$source_id')\">" . $step['file'] . " [ {$step['line']} ]</a>";
+                } else {
+                    $error .= 'PHP internal call';
+                }
+                $error .= "</span> &raquo; {$step['function']} (";
+                if ($step['args']) {
+                    $args_id = $error_id . 'args' . $i;
+                    $error .= "<a href='#$args_id' onclick=\"return koggle('$args_id')\">arguments</a>";
+                }
+                $error .= ")</p>";
 
-            if ($step['args']) {
-                $error .= "<div id='$args_id' class='collapsed'>";
-                $error .= "<table cellspacing='0'>";
-                foreach ($step['args'] as $name => $arg) {
+                if ($step['args']) {
+                    $error .= "<div id='$args_id' class='collapsed'>";
+                    $error .= "<table cellspacing='0'>";
+                    foreach ($step['args'] as $name => $arg) {
+                        $error .= "<tr>";
+                        $error .= "<td><code>$name</code></td>";
+                        $error .= "<td><pre>" . TVarDumper::dump($arg) . "</pre></td>";
+                        $error .= "</tr>";
+                    }
+                    $error .= "</table>";
+                    $error .= "</div>";
+                }
+
+                if (isset($source_id)) {
+                    $error .= "<pre id='$source_id' class='source collapsed'><code>{$step['source']}</code></pre>";
+                }
+
+                $error .= "</li>";
+            }
+
+            $error .= "</ol>";
+            $error .= "</div>";
+            $error .= "<div class='content'>";
+
+            foreach (array('_GET', '_CLEAN_SERVER', '_POST', '_REQUEST') as $var) {
+                if (empty($GLOBALS[$var]) || !is_array($GLOBALS[$var])) {
+                    continue;
+                }
+
+                $env_id = $error_id . 'environment' . strtolower($var);
+
+                $error .= '<h3><a href="#' . $env_id . '" onclick="return koggle(\'' . $env_id . '\')">$' . $var . '</a></h3>';
+                $error .= '<div id="' . $env_id . '">';
+                $error .= '<table cellspacing="0">';
+                foreach ($GLOBALS[$var] as $key => $value) {
                     $error .= "<tr>";
-                    $error .= "<td><code>$name</code></td>";
-                    $error .= "<td><pre>" . TVarDumper::dump($arg) . "</pre></td>";
+                    $error .= "<td><code>$key</code></td>";
+                    $error .= "<td><pre>" . TVarDumper::dump($value) . "</pre></td>";
                     $error .= "</tr>";
                 }
+
                 $error .= "</table>";
                 $error .= "</div>";
             }
 
-            if (isset($source_id)) {
-                $error .= "<pre id='$source_id' class='source collapsed'><code>{$step['source']}</code></pre>";
-            }
-
-            $error .= "</li>";
-        }
-
-        $error .= "</ol>";
-        $error .= "</div>";
-        $error .= "<div class='content'>";
-
-        foreach (array('_GET', '_CLEAN_SERVER', '_POST', '_REQUEST') as $var) {
-            if (empty($GLOBALS[$var]) || !is_array($GLOBALS[$var])) {
-                continue;
-            }
-
-            $env_id = $error_id . 'environment' . strtolower($var);
-
-            $error .= '<h3><a href="#' . $env_id . '" onclick="return koggle(\'' . $env_id . '\')">$' . $var . '</a></h3>';
-            $error .= '<div id="' . $env_id . '">';
-            $error .= '<table cellspacing="0">';
-            foreach ($GLOBALS[$var] as $key => $value) {
-                $error .= "<tr>";
-                $error .= "<td><code>$key</code></td>";
-                $error .= "<td><pre>" . TVarDumper::dump($value) . "</pre></td>";
-                $error .= "</tr>";
-            }
-
-            $error .= "</table>";
             $error .= "</div>";
+
+            return $error;
         }
 
-        $error .= "</div>";
-
-        return $error;
-    }
-
-    public static function error_php_enduser($title, $subtitle, $enduser_message) {
-        $error = <<<error
+        public static function error_php_enduser($title, $subtitle, $enduser_message) {
+            $error = <<<error
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
     <head>
@@ -1061,166 +1041,238 @@ error;
 </html>
 error;
 
-        return $error;
+            return $error;
+        }
+
     }
-
-}
-
-function exception_send_mail($subject, $original_message) {
-    $http = new HTTP_Request();
-    return $http->request("http://28hours.org/mailer/index.php/send", 'POST', [
-        "subject" => $subject,
-        "contents" => $original_message,
-    ]);
-}
-
-/**
- * Logs a message (and sends it to Bruno) without displaying an error to the user
- * or terminating script execution. Great for notes on the execution of code.
- * Pass any additional arguments you want to this function,
- * they will be included in the email because of the stack trace.
- *
- * @param string $message
- */
-function log_without_error($message, $data = array()) {
-    Exceptions::exception_handler(new Exception("[Just logging, no error was shown] " . $message), false);
-}
-
-/**
- * Throws an exception (which is logged and emailed), displaying an error to the user and terminating script execution.
- * Pass any additional arguments you want to this function,
- * they will be included in the email because of the stack trace.
- *
- * @param string $message
- */
-function throw_exception($message, $data = array()) {
-    throw new Exception($message);
-}
-
-/**
- * Logs an exception (and sends it to Bruno) without displaying an error to the user
- * or terminating script execution. Great for notes on the execution of code.
- *
- * @param Exception $e
- */
-function log_exception(Exception $e) {
-    Exceptions::exception_handler($e, false);
-}
-
-/**
- * TVarDumper class file
- *
- * @author    Qiang Xue <qiang.xue@gmail.com>
- * @link      http://www.pradosoft.com/
- * @copyright Copyright &copy; 2005-2014 PradoSoft
- * @license   http://www.pradosoft.com/license/
- * @package   System.Util
- */
-
-/**
- * TVarDumper class.
- * TVarDumper is intended to replace the buggy PHP function var_dump and print_r.
- * It can correctly identify the recursively referenced objects in a complex
- * object structure. It also has a recursive depth control to avoid indefinite
- * recursive display of some peculiar variables.
- * TVarDumper can be used as follows,
- * <code>
- *   echo TVarDumper::dump($var);
- * </code>
- *
- * @author  Qiang Xue <qiang.xue@gmail.com>
- * @package System.Util
- * @since   3.0
- */
-class TVarDumper {
-    private static $_objects;
-    private static $_output;
-    private static $_depth;
 
     /**
-     * Converts a variable into a string representation.
-     * This method achieves the similar functionality as var_dump and print_r
-     * but is more robust when handling complex objects such as PRADO controls.
+     * TVarDumper class file
      *
-     * @param mixed   variable to be dumped
-     * @param integer maximum depth that the dumper should go into the variable. Defaults to 10.
-     *
-     * @return string the string representation of the variable
+     * @author    Qiang Xue <qiang.xue@gmail.com>
+     * @link      http://www.pradosoft.com/
+     * @copyright Copyright &copy; 2005-2014 PradoSoft
+     * @license   http://www.pradosoft.com/license/
+     * @package   System.Util
      */
-    public static function dump($var, $depth = 4, $highlight = false) {
-        self::$_output = '';
-        self::$_objects = array();
-        self::$_depth = $depth;
-        self::dumpInternal($var, 0);
-        if ($highlight) {
-            $result = highlight_string("<?php\n" . self::$_output, true);
-            return preg_replace('/&lt;\\?php<br \\/>/', '', $result, 1);
-        } else
-            return self::$_output;
-    }
 
-    private static function dumpInternal($var, $level) {
-        switch (gettype($var)) {
-            case 'boolean':
-                self::$_output .= $var ? 'true' : 'false';
-                break;
-            case 'integer':
-                self::$_output .= "$var";
-                break;
-            case 'double':
-                self::$_output .= "$var";
-                break;
-            case 'string':
-                self::$_output .= "'$var'";
-                break;
-            case 'resource':
-                self::$_output .= '{resource}';
-                break;
-            case 'NULL':
-                self::$_output .= "null";
-                break;
-            case 'unknown type':
-                self::$_output .= '{unknown}';
-                break;
-            case 'array':
-                if (self::$_depth <= $level)
-                    self::$_output .= 'array(...)';
-                else if (empty($var))
-                    self::$_output .= 'array()';
-                else {
-                    $keys = array_keys($var);
-                    $spaces = str_repeat(' ', $level * 4);
-                    self::$_output .= "array\n" . $spaces . '(';
-                    foreach ($keys as $key) {
-                        self::$_output .= "\n" . $spaces . "    [$key] => ";
-                        self::$_output .= self::dumpInternal($var[$key], $level + 1);
+    /**
+     * TVarDumper class.
+     * TVarDumper is intended to replace the buggy PHP function var_dump and print_r.
+     * It can correctly identify the recursively referenced objects in a complex
+     * object structure. It also has a recursive depth control to avoid indefinite
+     * recursive display of some peculiar variables.
+     * TVarDumper can be used as follows,
+     * <code>
+     *   echo TVarDumper::dump($var);
+     * </code>
+     *
+     * @author  Qiang Xue <qiang.xue@gmail.com>
+     * @package System.Util
+     * @since   3.0
+     */
+    class TVarDumper {
+        private static $_objects;
+        private static $_output;
+        private static $_depth;
+
+        /**
+         * Converts a variable into a string representation.
+         * This method achieves the similar functionality as var_dump and print_r
+         * but is more robust when handling complex objects such as PRADO controls.
+         *
+         * @param mixed   variable to be dumped
+         * @param integer maximum depth that the dumper should go into the variable. Defaults to 10.
+         *
+         * @return string the string representation of the variable
+         */
+        public static function dump($var, $depth = 4, $highlight = false) {
+            self::$_output = '';
+            self::$_objects = array();
+            self::$_depth = $depth;
+            self::dumpInternal($var, 0);
+            if ($highlight) {
+                $result = highlight_string("<?php\n" . self::$_output, true);
+                return preg_replace('/&lt;\\?php<br \\/>/', '', $result, 1);
+            } else
+                return self::$_output;
+        }
+
+        private static function dumpInternal($var, $level) {
+            switch (gettype($var)) {
+                case 'boolean':
+                    self::$_output .= $var ? 'true' : 'false';
+                    break;
+                case 'integer':
+                    self::$_output .= "$var";
+                    break;
+                case 'double':
+                    self::$_output .= "$var";
+                    break;
+                case 'string':
+                    self::$_output .= "'$var'";
+                    break;
+                case 'resource':
+                    self::$_output .= '{resource}';
+                    break;
+                case 'NULL':
+                    self::$_output .= "null";
+                    break;
+                case 'unknown type':
+                    self::$_output .= '{unknown}';
+                    break;
+                case 'array':
+                    if (self::$_depth <= $level)
+                        self::$_output .= 'array(...)';
+                    else if (empty($var))
+                        self::$_output .= 'array()';
+                    else {
+                        $keys = array_keys($var);
+                        $spaces = str_repeat(' ', $level * 4);
+                        self::$_output .= "array\n" . $spaces . '(';
+                        foreach ($keys as $key) {
+                            self::$_output .= "\n" . $spaces . "    [$key] => ";
+                            self::$_output .= self::dumpInternal($var[$key], $level + 1);
+                        }
+                        self::$_output .= "\n" . $spaces . ')';
                     }
-                    self::$_output .= "\n" . $spaces . ')';
-                }
-                break;
-            case 'object':
-                if (($id = array_search($var, self::$_objects, true)) !== false)
-                    self::$_output .= get_class($var) . '#' . ($id + 1) . '(...)';
-                else if (self::$_depth <= $level)
-                    self::$_output .= get_class($var) . '(...)';
-                else {
-                    $id = array_push(self::$_objects, $var);
-                    $className = get_class($var);
-                    $members = (array) $var;
-                    $keys = array_keys($members);
-                    $spaces = str_repeat(' ', $level * 4);
-                    self::$_output .= "$className#$id\n" . $spaces . '(';
-                    foreach ($keys as $key) {
-                        $keyDisplay = strtr(trim($key), array("\0" => ':'));
-                        self::$_output .= "\n" . $spaces . "    [$keyDisplay] => ";
-                        self::$_output .= self::dumpInternal($members[$key], $level + 1);
+                    break;
+                case 'object':
+                    if (($id = array_search($var, self::$_objects, true)) !== false)
+                        self::$_output .= get_class($var) . '#' . ($id + 1) . '(...)';
+                    else if (self::$_depth <= $level)
+                        self::$_output .= get_class($var) . '(...)';
+                    else {
+                        $id = array_push(self::$_objects, $var);
+                        $className = get_class($var);
+                        $members = (array) $var;
+                        $keys = array_keys($members);
+                        $spaces = str_repeat(' ', $level * 4);
+                        self::$_output .= "$className#$id\n" . $spaces . '(';
+                        foreach ($keys as $key) {
+                            $keyDisplay = strtr(trim($key), array("\0" => ':'));
+                            self::$_output .= "\n" . $spaces . "    [$keyDisplay] => ";
+                            self::$_output .= self::dumpInternal($members[$key], $level + 1);
+                        }
+                        self::$_output .= "\n" . $spaces . ')';
                     }
-                    self::$_output .= "\n" . $spaces . ')';
-                }
-                break;
+                    break;
+            }
         }
     }
+
+    //Set the Exception Handler
+    set_exception_handler(array('Brunodebarros\\StandaloneErrorCatcher\\Exceptions', 'exception_handler'));
+
+    // Set the Error Handler
+    set_error_handler(array('Brunodebarros\\StandaloneErrorCatcher\\Exceptions', 'error_handler'));
+
+    // Set the handler for shutdown to catch Parse errors
+    register_shutdown_function(array('Brunodebarros\\StandaloneErrorCatcher\\Exceptions', 'shutdown_handler'));
+
+    // This is a hack to set the default timezone if it isn't set. Not setting it causes issues.
+    date_default_timezone_set(date_default_timezone_get());
 }
 
-# Init.
-$exceptions = new Exceptions();
+namespace {
+
+    use Brunodebarros\StandaloneErrorCatcher\HTTP_Request;
+
+    function exception_send_mail($subject, $original_message, $exception_text) {
+        if (defined("SLACK_WEBHOOK")) {
+            $http = new HTTP_Request();
+
+            # Example 1: [Gallagher Bassett DHL Document Portal] [Just logging, no error was shown] Could not send an email because there was no 'To' address. (/usr/lib/php/My_Exceptions.include.php [752])
+            # Example 2: [TK Claim Solutions Management System - RPA scheme] The 'MY_Model::edit' validation failed. (/usr/lib/php/helpers.php [3124])
+            $subject = explode("]", $subject, 2);
+            $title = $subject[0];
+
+            # Example 1: [Just logging, no error was shown] Could not send an email because there was no 'To' address. (/usr/lib/php/My_Exceptions.include.php [752])
+            # Example 2: The 'MY_Model::edit' validation failed. (/usr/lib/php/helpers.php [3124])
+            $subject = $subject[1];
+            $matches = [];
+            preg_match("/^(.+)\\(([^\\)].+)\\)$/us", $subject, $matches);
+
+            $subject = $matches[1];
+            $file_line = $matches[2];
+
+            $matches = [];
+            preg_match("/^(.+)\\(([^\\)].+)\\)$/us", trim($subject), $matches);
+
+            if (isset($matches[2]) && !empty($matches[2])) {
+                $subject = $matches[1];
+                $file_line = $matches[2];
+            }
+
+            $source_url = $http->request('http://i.28hours.org/upload.php', 'POST', [
+                "key" => "LZyakTuZpyvN4TjdpawvBmsRoBsqBKkpiCYZ4MVVnmCENwrJze",
+                "contents" => base64_encode($original_message),
+            ]);
+
+            $buffer = explode("-", $subject, 2);
+
+            $payload = json_encode([
+                "text" => "",
+                "attachments" => [
+                    [
+                        "fallback" => $exception_text,
+                        "color" => "danger",
+                        "title" => trim(end($buffer)),
+                        "title_link" => $source_url,
+                        "fields" => [
+                            [
+                                "title" => "File/Line",
+                                "value" => $file_line,
+                                "short" => false,
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+
+            $http->request(SLACK_WEBHOOK, 'POST', [
+                "payload" => $payload,
+            ]);
+            return true;
+        }
+
+        $http = new HTTP_Request();
+        return $http->request("http://28hours.org/mailer/index.php/send", 'POST', [
+            "subject" => $subject,
+            "contents" => $original_message,
+        ]);
+    }
+
+    /**
+     * Logs a message (and sends it to Bruno) without displaying an error to the user
+     * or terminating script execution. Great for notes on the execution of code.
+     * Pass any additional arguments you want to this function,
+     * they will be included in the email because of the stack trace.
+     *
+     * @param string $message
+     */
+    function log_without_error($message, $data = array()) {
+        Exceptions::exception_handler(new \Exception("[Just logging, no error was shown] " . $message), false);
+    }
+
+    /**
+     * Throws an exception (which is logged and emailed), displaying an error to the user and terminating script execution.
+     * Pass any additional arguments you want to this function,
+     * they will be included in the email because of the stack trace.
+     *
+     * @param string $message
+     */
+    function throw_exception($message, $data = array()) {
+        throw new \Exception($message);
+    }
+
+    /**
+     * Logs an exception (and sends it to Bruno) without displaying an error to the user
+     * or terminating script execution. Great for notes on the execution of code.
+     *
+     * @param \Exception $e
+     */
+    function log_exception($e) {
+        Exceptions::exception_handler($e, false);
+    }
+}

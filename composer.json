@@ -1,4 +1,22 @@
 {
     "name": "brunodebarros/standalone-error-catcher",
-    "description": "A simple catch-all for PHP errors that makes an HTTP request on every error."
+    "description": "A simple catch-all for PHP errors that makes an HTTP request on every error.",
+    "type": "library",
+    "keywords": [ ],
+    "homepage": "https://github.com/brunodebarros/standalone-error-catcher",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Bruno De Barros",
+            "email": "bruno@terraduo.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.4"
+    },
+    "autoload": {
+        "files": [
+            "errors.php"
+        ]
+    }
 }
