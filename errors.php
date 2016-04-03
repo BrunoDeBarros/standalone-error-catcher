@@ -440,13 +440,13 @@ namespace Brunodebarros\StandaloneErrorCatcher {
                     }
 
                     if ($is_not_local) {
-                        exception_send_mail($subject, $contents);
+                        exception_send_mail($subject, $contents, self::exception_text($e));
                     }
 
                     # Make sure to end the execution of the script now.
                     exit(1);
                 } else {
-                    exception_send_mail($subject, $contents);
+                    exception_send_mail($subject, $contents, self::exception_text($e));
                 }
                 return true;
             } catch (\Throwable $e) {
@@ -687,7 +687,7 @@ namespace Brunodebarros\StandaloneErrorCatcher {
         public static function error_php_custom($type, $code, $message, $file, $line, $trace) {
             $error_id = uniqid('error');
             $title = defined("ENV_TITLE") ? ENV_TITLE : "Unknown Project";
-            $class = "Exceptions";
+            $class = "Brunodebarros\\StandaloneErrorCatcher\\Exceptions";
             $source = $class::debug_source($file, $line);
             $processed_trace = $class::trace($trace);
 
