@@ -1049,16 +1049,6 @@ error;
     }
 
     /**
-     * TVarDumper class file
-     *
-     * @author    Qiang Xue <qiang.xue@gmail.com>
-     * @link      http://www.pradosoft.com/
-     * @copyright Copyright &copy; 2005-2014 PradoSoft
-     * @license   http://www.pradosoft.com/license/
-     * @package   System.Util
-     */
-
-    /**
      * TVarDumper class.
      * TVarDumper is intended to replace the buggy PHP function var_dump and print_r.
      * It can correctly identify the recursively referenced objects in a complex
@@ -1173,7 +1163,7 @@ error;
     register_shutdown_function(array('Brunodebarros\\StandaloneErrorCatcher\\Exceptions', 'shutdown_handler'));
 
     // This is a hack to set the default timezone if it isn't set. Not setting it causes issues.
-    date_default_timezone_set(date_default_timezone_get());
+    date_default_timezone_set("Europe/London");
 }
 
 namespace {
