@@ -1244,7 +1244,7 @@ namespace {
      * @param string $message
      */
     function log_without_error($message, $data = array()) {
-        Exceptions::exception_handler(new \Exception("[Just logging, no error was shown] " . $message), false);
+        Brunodebarros\StandaloneErrorCatcher\Exceptions::exception_handler(new \Exception("[Just logging, no error was shown] " . $message), false);
     }
 
     /**
@@ -1265,6 +1265,6 @@ namespace {
      * @param \Exception $e
      */
     function log_exception($e) {
-        Exceptions::exception_handler($e, false);
+        Brunodebarros\StandaloneErrorCatcher\Exceptions::exception_handler($e, false);
     }
 }
